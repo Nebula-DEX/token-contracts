@@ -23,6 +23,10 @@ contract VegaSwap is Ownable {
     error RedeemLeftoverNotEnabled();
     /// @notice Error if deadline for VEGA swap has passed
     error VegaDeadlinePassed();
+    /// @notice Error if deadline for VEGA swap has not passed
+    error VegaDeadlineNotPassed();
+    /// @notice Error if VEGA has already been withdrawn
+    error VegaAlreadyWithdrawn();
     /// @notice Error if deadline for leftover NEB redemption has not begun
     error RedeemLeftoverNotStarted();
     /// @notice Error if deadline for leftover NEB redemption has passed
@@ -55,6 +59,8 @@ contract VegaSwap is Ownable {
 
     /// @notice The amount of VEGA swapped by each account
     mapping(address account => uint256 amount) public vegaSwapped;
+    /// @notice The amount of VEGA withdrawn by each account
+    mapping(address account => uint256 amount) public vegaWithdrawn;
     /// @notice The amount of NEB swapped by each account
     mapping(address account => uint256 amount) public nebulaSwapped;
     /// @notice Whether each account is eligible to redeeming leftover NEB
@@ -146,5 +152,13 @@ contract VegaSwap is Ownable {
         }
         uint256 remainder = nebulaAllocation - nebulaTotalSwapped;
         return (vegaSwapped[account] * remainder) / vegaTotalSwapped;
+    }
+
+    /// @notice Withdraw VEGA after swap deadline has passed
+    function withdrawVega() public {
+        require(vegaSwapDeadline < block.timestamp, VegaDeadlineNotPassed());
+        require(vegaWithdrawn[msg.sender] == 0, VegaAlreadyWithdrawn());
+        vegaToken.safeTransfer(msg.sender, vegaSwapped[msg.sender]);
+        vegaWithdrawn[msg.sender] = vegaSwapped[msg.sender];
     }
 }

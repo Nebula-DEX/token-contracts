@@ -94,4 +94,19 @@ describe("VegaSwap", function () {
     await time.increase(86400);
     expect(await vegaSwap.calculateLeftoverNeb(owner.address)).to.be.equal(0);
   });
+  it("should not withdraw VEGA before swap deadline", async function() {
+    const { nebulaToken, vegaSwap, vega, stakingBridge, owner, otherAccount } = await loadFixture(deployNEB);
+    await expect(vegaSwap.withdrawVega()).to.be.revertedWithCustomError(vegaSwap, "VegaDeadlineNotPassed");
+  });
+  it("should not withdraw VEGA when already withdrawn", async function() {
+    const { nebulaToken, vegaSwap, vega, stakingBridge, owner, otherAccount } = await loadFixture(deployNEB);
+    await expect(vegaSwap.withdrawVega()).to.be.revertedWithCustomError(vegaSwap, "VegaDeadlineNotPassed");
+    await vega.approve(vegaSwap.target, ethers.parseUnits("64999723", "ether"));
+    await vegaSwap.swap(0);
+    await time.increase(86400);
+    await vegaSwap.withdrawVega();
+    expect(await vega.balanceOf(owner.address)).to.be.equal("64999723000000000000000000");
+    expect(await vega.balanceOf(vegaSwap.target)).to.be.equal("0");
+    await expect(vegaSwap.withdrawVega()).to.be.revertedWithCustomError(vegaSwap, "VegaAlreadyWithdrawn");
+  });
 });
